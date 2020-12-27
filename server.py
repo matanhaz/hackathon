@@ -1,4 +1,3 @@
-import copy
 import multiprocessing
 import threading
 import socket
@@ -51,9 +50,10 @@ class Server:
 
         while True:
             now = time.time()
-            if now-start >10:
+            if now-start > 15:
                 break
             try:
+
                 server_socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 server_socket_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 server_socket_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
@@ -74,6 +74,7 @@ class Server:
                 teams.append((name, client_socket_tcp))
                 client_socket_tcp.send(b"you are connected, wait for game to start")
             except Exception as e:
+                udp_lock.release()
                 continue
 
         print("OUT")

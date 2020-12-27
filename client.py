@@ -2,7 +2,7 @@ import socket
 import struct
 import sys
 import threading
-from pynput.keyboard import Listener as keyBoardListener
+#from pynput.keyboard import Listener as keyBoardListener
 
 
 magic_cookie = 0xfeedbeef
@@ -49,14 +49,14 @@ class Client:
             self.receive_msg()
 
     def handle_game(self, client_socket_tcp):
-        keyBoard_Listener = keyBoardListener(on_press=lambda key: self.on_press(key, client_socket_tcp))
-        keyBoard_Listener.start()
+       # keyBoard_Listener = keyBoardListener(on_press=lambda key: self.on_press(key, client_socket_tcp))
+      #  keyBoard_Listener.start()
 
         while True:
             stop = client_socket_tcp.recv(1024)
             print(stop)
             if stop == b"stop":
-                keyBoard_Listener.stop()
+           #     keyBoard_Listener.stop()
                 break
 
         print("finished game")

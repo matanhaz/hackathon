@@ -2,7 +2,7 @@ import socket
 import struct
 import sys
 import threading
-from pynput.keyboard import Listener as keyBoardListener
+#from pynput.keyboard import Listener as keyBoardListener
 
 
 magic_cookie = 0xfeedbeef
@@ -10,7 +10,7 @@ offer_msg_type = 0x2
 BUFFER_SIZE = 2048
 port = 13117
 broadcast_address = ('255.255.255.255', port)
-team_name = b"IDO ROM <3"
+team_name = b"AZAMI <3"
 
 
 class Client:
@@ -20,10 +20,10 @@ class Client:
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.client_socket.bind(('', port))
 
-
     def receive_msg(self):
 
         print("Client started, listening for offer requests...")
+
         msg, server_address = self.client_socket.recvfrom(BUFFER_SIZE)
         (magicCookie, msg_type, server_port) = struct.unpack('!IbH', msg)
         if magicCookie == magic_cookie:
@@ -49,14 +49,14 @@ class Client:
             self.receive_msg()
 
     def handle_game(self, client_socket_tcp):
-        keyBoard_Listener = keyBoardListener(on_press=lambda key: self.on_press(key, client_socket_tcp))
-        keyBoard_Listener.start()
+       # keyBoard_Listener = keyBoardListener(on_press=lambda key: self.on_press(key, client_socket_tcp))
+      #  keyBoard_Listener.start()
 
         while True:
             stop = client_socket_tcp.recv(1024)
             print(stop)
             if stop == b"stop":
-                keyBoard_Listener.stop()
+           #     keyBoard_Listener.stop()
                 break
 
         print("finished game")
