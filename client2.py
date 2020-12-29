@@ -13,7 +13,7 @@ magic_cookie = 0xfeedbeef
 offer_msg_type = 0x2
 BUFFER_SIZE = 2048
 port = 13117
-team_name = "*** Arnold Schwarzenegger ***\n".encode()
+team_name = "*** Cookie Monset ^ _ ^  ***\n".encode()
 
 old_settings = None
 
@@ -65,6 +65,7 @@ class Client:
     async def handle_game(self, client_socket_tcp):
         tWrite = asyncio.create_task(self.get_char_from_user(client_socket_tcp))
         tRead = asyncio.create_task(self.recv_from_server(client_socket_tcp))
+        # tTimeout = asyncio.create_task(self.timeout_check())
         finished, unfinished = await asyncio.wait([tRead, tWrite], return_when = asyncio.FIRST_COMPLETED)
         for task in unfinished:
             task.cancel()
@@ -90,11 +91,15 @@ class Client:
     async def recv_from_server(self, client_socket_tcp):
         loop = asyncio.get_event_loop()
         while True:
-            modified_sentence = await loop.run_in_executor(None, lambda: client_socket_tcp.recv(1024))
-            if not modified_sentence:
+            try:
+                modified_sentence = await loop.run_in_executor(None, lambda: client_socket_tcp.recv(1024))
+                if not modified_sentence:
+                    print("SERVER TOLD ME GAME IS OVER :( ")
+                    break
+                print (modified_sentence)
+            except:
+                print("SERVER TOLD ME GAME IS OVER :( ")
                 break
-            print (modified_sentence)
-
 
 client = Client()
 asyncio.run(client.receive_msg())

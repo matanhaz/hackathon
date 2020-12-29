@@ -11,16 +11,10 @@ import select
 server_broadcast_port = 13117
 BUFFER_SIZE = 2048
 udp_lock = threading.Lock()
-
-
-lock_obj = threading.Lock()
-game_lock = threading.Lock()
-counter1_lock = threading.Lock()
-counter2_lock = threading.Lock()
-
 magic_cookie = 0xfeedbeef
 offer_msg_type = 0x2
-c = threading.Condition()
+
+
 teams = []
 group1 = []
 group2 = []
@@ -45,8 +39,13 @@ class Server:
         self.server_udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.server_udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
     def main(self):
-        self.start_server()
+        while True:
+            teams.clear()
+            group1.clear()
+            group2.clear()
+            self.start_server()
 
     def start_server(self):
         print("Server started, listening on ip ...")
@@ -100,6 +99,10 @@ class Server:
             thread = threading.Thread(target=self.handle_game_single_client,
                                       args=(team,))
             thread.start()
+            thread.join()
+
+
+
         # print(start_message_part1 + self.to_string_group(group1) + start_message_part2 +
         #    self.to_string_group(group2) + start_message_part3)
 
@@ -112,8 +115,7 @@ class Server:
         #     time.sleep(1)
         #
         # print("Thread " + str(threading.current_thread().ident) + " is NOT going night night")
-        group2_counter = 0
-        group1_counter = 0
+        group_counter = 0
         tup[1].send((start_message_part1 + self.to_string_group(group1) + start_message_part2 +
                      self.to_string_group(group2) + start_message_part3).encode())
 
@@ -131,22 +133,15 @@ class Server:
                 break
             try:
                 c = tup[1].recv(3)
-                if tup[0] in group1:
-                    counter1_lock.acquire()
-                    group1_counter += 1
-                    counter1_lock.release()
-                if tup[0] in group2:
-                    counter2_lock.acquire()
-                    group2_counter += 1
-                    counter2_lock.release()
+                group_counter+=1
                 tup[1].send("KIBALTI ET HATAV YA KAKI").encode()
             except:
                 continue
 
-        tup[1].send(b"stop")
-        print("group 1 counter " + (str(group1_counter)))
-        print("group 2 counter " + (str(group2_counter)))
-        print(tup[1])
+        # tup[1].send(b"stop")
+        print("group counter " + (str(group_counter)))
+        tup[1].close()
+
 
     def assign_to_groups(self):
         group1bool = True
