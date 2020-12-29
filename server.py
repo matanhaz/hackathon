@@ -25,12 +25,17 @@ teams = []
 group1 = []
 group2 = []
 
-start_message_part1 = b"""Welcome to Keyboard Spamming Battle Royale.
+start_message_part1 = """Welcome to Keyboard Spamming Battle Royale.
 Group 1:
 ==
 """
-start_message_part2 = b"Group 2: \n==\n"
-start_message_part3 = b"Start pressing keys on your keyboard as fast as you can!!"
+start_message_part2 = """
+Group 2:
+==
+"""
+start_message_part3 = """
+Start pressing keys on your keyboard as fast as you can!!
+"""
 
 
 class Server:
@@ -50,7 +55,7 @@ class Server:
 
         while True:
             now = time.time()
-            if now-start > 15:
+            if now-start > 8:
                 break
             try:
 
@@ -70,7 +75,8 @@ class Server:
                 client_socket_tcp, client_address = server_socket_tcp.accept()
                 udp_lock.release()
                 name = client_socket_tcp.recv(2048)
-                print(name)
+                print("Willkommen zuhause: " + name.decode())
+                print("GIT RDY!!!")
                 teams.append((name, client_socket_tcp))
                 client_socket_tcp.send(b"you are connected, wait for game to start")
             except Exception as e:
@@ -85,7 +91,7 @@ class Server:
     def wait_for_accept_offer(self,server_port):
         while udp_lock.locked():
             msg = struct.pack('!IbH', magic_cookie, offer_msg_type, server_port)
-            self.server_udp_socket.sendto(msg, ('255.255.255.255', server_broadcast_port))
+            self.server_udp_socket.sendto(msg, ('172.1.255.255', server_broadcast_port))
 
 
     def handle_game(self):
@@ -94,8 +100,8 @@ class Server:
             thread = threading.Thread(target=self.handle_game_single_client,
                                       args=(team,))
             thread.start()
-        print(start_message_part1 + self.to_string_group(group1) + start_message_part2 +
-              self.to_string_group(group2) + start_message_part3)
+        # print(start_message_part1 + self.to_string_group(group1) + start_message_part2 +
+        #    self.to_string_group(group2) + start_message_part3)
 
         # c.release()
         # c.notify_all()
@@ -109,7 +115,7 @@ class Server:
         group2_counter = 0
         group1_counter = 0
         tup[1].send((start_message_part1 + self.to_string_group(group1) + start_message_part2 +
-                     self.to_string_group(group2) + start_message_part3))
+                     self.to_string_group(group2) + start_message_part3).encode())
 
         # c = tup[1].recv(1)
         # team_counter+=1
@@ -133,13 +139,13 @@ class Server:
                     counter2_lock.acquire()
                     group2_counter += 1
                     counter2_lock.release()
-                tup[1].send(b"KIBALTI ET HATAV YA KAKI")
+                tup[1].send("KIBALTI ET HATAV YA KAKI").encode()
             except:
                 continue
 
         tup[1].send(b"stop")
-        print(b"group 1 counter " + str.encode(str(group1_counter)))
-        print(b"group 2 counter " + str.encode(str(group2_counter)))
+        print("group 1 counter " + (str(group1_counter)))
+        print("group 2 counter " + (str(group2_counter)))
         print(tup[1])
 
     def assign_to_groups(self):
@@ -156,7 +162,7 @@ class Server:
         ret_str = ""
         for g in group:
             ret_str = ret_str + (str(g))
-        return str.encode(ret_str)
+        return (ret_str)
 
 
 server = Server()
