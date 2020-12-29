@@ -70,6 +70,7 @@ class Client:
         for task in unfinished:
             task.cancel()
 
+
         # when finished, start from the beginning again
         print("Game Finished")
         client = Client()
@@ -84,7 +85,7 @@ class Client:
                 key = await loop.run_in_executor(None, lambda: sys.stdin.read(1))
                 if not key == "":
                     print (key)
-                    client_socket_tcp.send(key.encode())    
+                    client_socket_tcp.send(key.encode())
             except Exception as e:
                 break
 
