@@ -13,7 +13,7 @@ magic_cookie = 0xfeedbeef
 offer_msg_type = 0x2
 BUFFER_SIZE = 2048
 port = 13117
-team_name = "*** Cookie Monset ^ _ ^  ***\n".encode()
+team_name = """*** Python 3.8.5 (default, Jul 28 2020, 12:59:40) [GCC 9.3.0] on linux Type "help", "copyright", "credits" or "license" for more information. >>>         while True:File "<stdin>", line  while True: IndentationError: unexpected indent\n""".encode()
 
 old_settings = None
 

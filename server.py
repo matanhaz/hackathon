@@ -7,6 +7,15 @@ from timeit import Timer
 from multiprocessing import Process
 
 import select
+import scapy.all as scapy
+
+CYAN = '\u001b[36m'
+YELLOW = '\u001b[33m'
+BLUE =  '\u001b[34m'
+RESET= '\u001b[0m'
+
+
+
 
 server_broadcast_port = 13117
 BUFFER_SIZE = 2048
@@ -14,10 +23,13 @@ udp_lock = threading.Lock()
 magic_cookie = 0xfeedbeef
 offer_msg_type = 0x2
 
+dict_lock = threading.Lock()
+
 
 teams = []
 group1 = []
 group2 = []
+teams_counters ={}
 
 start_message_part1 = """Welcome to Keyboard Spamming Battle Royale.
 Group 1:
@@ -45,17 +57,20 @@ class Server:
             teams.clear()
             group1.clear()
             group2.clear()
+            teams_counters.clear()
             self.start_server()
 
 
     def start_server(self):
-        print("Server started, listening on ip ...")
+        server_ip = scapy.get_if_addr("eth1")
+        print("Server started,listening on IP address %s" % (server_ip))
+        print("I'm waiting for clients, someone wants to play? ")
 
         start = time.time()
 
         while True:
             now = time.time()
-            if now-start > 8:
+            if now-start > 10:
                 break
             try:
 
@@ -63,10 +78,9 @@ class Server:
                 server_socket_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 server_socket_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
                 server_socket_tcp.settimeout(10)
-                server_socket_tcp.bind(('', 0))
+                server_socket_tcp.bind((server_ip, 0))
                 tcp_port = server_socket_tcp.getsockname()[1]
                 server_socket_tcp.listen(1)
-                print("I'm waiting for clients, someone wants to play? ")
                 udp_lock.acquire()
                 udp_connection_thread= threading.Thread(target=self.wait_for_accept_offer,
                                                          args=(tcp_port,))
@@ -74,16 +88,19 @@ class Server:
 
                 client_socket_tcp, client_address = server_socket_tcp.accept()
                 udp_lock.release()
+
                 name = client_socket_tcp.recv(2048)
-                print("Willkommen zuhause: " + name.decode())
+                print(BLUE + "Willkommen zuhause: " + name.decode() + RESET)
                 print("GIT RDY!!!")
                 teams.append((name, client_socket_tcp))
-                client_socket_tcp.send(b"you are connected, wait for game to start")
+                teams_counters[name]=0
+                # client_socket_tcp.send(b"you are connected, wait for game to start")
+                print("waiting for more clients")
+
             except Exception as e:
                 udp_lock.release()
                 continue
 
-        print("OUT")
         time.sleep(2)
         print("Starting Game...")
         self.handle_game()
@@ -96,11 +113,35 @@ class Server:
 
     def handle_game(self):
         self.assign_to_groups()
+        threads = []
         for team in teams:
             thread = threading.Thread(target=self.handle_game_single_client,
                                       args=(team,))
+            threads.append(thread)
             thread.start()
-            thread.join()
+        for x in threads:
+            x.join()
+
+        g1_counter = 0
+        g2_counter = 0
+        for group in teams_counters.keys():
+            if group in group1:
+                g1_counter+=teams_counters[group]
+            else:
+                g2_counter+=teams_counters[group]
+
+        winner = (group1,1) if g1_counter>g2_counter else (group2,2)
+        print("""Game over !
+        Group 1 typed in %i characters.
+        Group 2 typed in %i characters.
+        Group %i wins!
+        Congratulations to the winners:
+        =="""%(g1_counter, g2_counter, winner[1]))
+
+
+        for x in winner[0]:
+            print(x.decode())
+
 
 
 
@@ -117,8 +158,8 @@ class Server:
         #
         # print("Thread " + str(threading.current_thread().ident) + " is NOT going night night")
         group_counter = 0
-        tup[1].send((start_message_part1 + self.to_string_group(group1) + start_message_part2 +
-                     self.to_string_group(group2) + start_message_part3).encode())
+        tup[1].send((BLUE + start_message_part1 + self.to_string_group(group1) + start_message_part2 +
+                     self.to_string_group(group2) + start_message_part3 +RESET).encode())
 
         # c = tup[1].recv(1)
         # team_counter+=1
@@ -140,7 +181,10 @@ class Server:
                 continue
 
         # tup[1].send(b"stop")
-        print("group counter " + (str(group_counter)))
+        dict_lock.acquire()
+        teams_counters[tup[0]] = group_counter
+        dict_lock.release()
+        #print("group counter " + (str(group_counter)))
         tup[1].close()
 
 
@@ -157,7 +201,7 @@ class Server:
     def to_string_group(self, group):
         ret_str = ""
         for g in group:
-            ret_str = ret_str + (str(g))
+            ret_str = ret_str + (str(g.decode()))
         return (ret_str)
 
 
