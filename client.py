@@ -8,13 +8,13 @@ import asyncio
 magic_cookie = 0xfeedbeef
 offer_msg_type = 0x2
 BUFFER_SIZE = 2048
-port = 13117
+port = 55555
 team_name = "[Errno 32] Broken Pipe\n".encode() # team name
 old_settings = None
 
 
 class Client:
-    def _init_(self):
+    def __init__(self):
         # initiate client UDP socket - enbales reuse address and broadcast
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -40,7 +40,7 @@ class Client:
             client_socket_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             client_socket_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             client_socket_tcp.connect((server_address[0], server_connect_port))
-            client_socket_tcp.send(team_name)
+            #client_socket_tcp.send(team_name)
             modified_sentence = client_socket_tcp.recv(1024)
             print("From Server: ", modified_sentence.decode()) # recieve start game message from server
             fd = sys.stdin.fileno()
@@ -50,12 +50,15 @@ class Client:
             except:
                 print("unknown exception")
             try:
-                await self.handle_game(client_socket_tcp)
+                if not client_socket_tcp.closed():
+                    await self.handle_game(client_socket_tcp)
+
             finally:
                 termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         except Exception as e:
             # self.receive_msg()
-            print(e)
+            #print(e)
+            time.sleep(0.1)
 
     async def handle_game(self, client_socket_tcp):
         # create 2 taks ->  1. tWrite - read from keyboard and send to server
@@ -75,7 +78,6 @@ class Client:
 
 
     async def get_char_from_user(self, client_socket_tcp):
-        print("HOLA")
         loop = asyncio.get_event_loop()
         while True:
             try:

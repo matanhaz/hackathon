@@ -15,7 +15,7 @@ GREEN = '\u001b[32m'
 
 
 
-server_broadcast_port = 13117
+server_broadcast_port = 55555
 BUFFER_SIZE = 2048
 udp_lock = threading.Lock()
 magic_cookie = 0xfeedbeef
@@ -46,7 +46,7 @@ Start pressing keys on your keyboard as fast as you can!!
 
 class Server:
 
-    def _init_(self):
+    def __init__(self):
         # initiate server UDP socket - enbales reuse address and broadcast
         self.server_udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server_udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -89,28 +89,38 @@ class Server:
 
                 client_socket_tcp, client_address = server_socket_tcp.accept()
                 udp_lock.release()
-
-                name = client_socket_tcp.recv(2048) # recieve team name from client
-                print(BLUE + "Willkommen zuhause: " + name.decode() + RESET) # a litlle German :)
-                #print("GIT RDY!!!")
-                teams.append((name, client_socket_tcp)) # add new team to our data structure
-                teams_counters[name]=0
-                # client_socket_tcp.send(b"you are connected, wait for game to start")
-                # print("waiting for more clients")
+                client_socket_tcp.setblocking(0)
+                try:
+                    name = client_socket_tcp.recv(2048) # recieve team name from client
+                except:
+                    print("User did not insert name")
+                    client_socket_tcp.close()
+                    time.sleep(0.2)
+                    continue
+                else:
+                    print(BLUE + "Willkommen zuhause: " + name.decode() + RESET) # a litlle German :)
+                    #print("GIT RDY!!!")
+                    teams.append((name, client_socket_tcp)) # add new team to our data structure
+                    teams_counters[name]=0
+                    # client_socket_tcp.send(b"you are connected, wait for game to start")
+                    # print("waiting for more clients")
 
             except Exception as e:
                 udp_lock.release()
                 continue
 
-        time.sleep(2)
-        print(RED + "Initiating Game Protocol..." + RESET)
-        self.handle_game()
+        time.sleep(0.1)
+        if len(teams) == 0:
+            print("I Guess no one want's to play")
+        else:
+            print(RED + "Initiating Game Protocol..." + RESET)
+            self.handle_game()
 
     def wait_for_accept_offer(self,server_port):
         while udp_lock.locked():
             msg = struct.pack('!IbH', magic_cookie, offer_msg_type, server_port) # 7 bytes, ! - big endian
             self.server_udp_socket.sendto(msg, ('172.1.255.255', server_broadcast_port)) # send broadcast offer to all subnet
-
+            time.sleep(0.1)
 
     def handle_game(self):
         # handle game
@@ -170,9 +180,8 @@ class Server:
         tup[1].send((BLUE + start_message_part1 + self.to_string_group(group1) + start_message_part2 +
                      self.to_string_group(group2) + start_message_part3 +RESET).encode())
 
-        tup[1].setblocking(0)
         start = time.time()
-
+        print("here 1")
         while True:
             now = time.time()
             if now - start > 10:
@@ -180,9 +189,12 @@ class Server:
             try:
                 c = tup[1].recv(3) # recv char and increase counter
                 if c:
+                    time.sleep(1)
                     group_counter+=1
             except:
+                time.sleep(1)
                 continue
+        print("here 2")
 
         # tup[1].send(b"stop")
         dict_lock.acquire() # lock and update statistics
