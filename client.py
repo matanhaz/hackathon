@@ -7,8 +7,12 @@ import asyncio
 
 magic_cookie = 0xfeedbeef
 offer_msg_type = 0x2
-BUFFER_SIZE = 2048
+BUFFER_SIZE = 1024
 port = 55555
+broadcast_address_ssh = '172.1.255.255'
+broadcast_address_local_host = '127.0.255.255'
+offer_message_length = 7
+
 team_name = "[Errno 32] Broken Pipe\n".encode() # team name
 old_settings = None
 
@@ -19,13 +23,13 @@ class Client:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.client_socket.bind(('172.1.255.255', port)) # recieve messages from entire subnet
+        self.client_socket.bind((broadcast_address_ssh, port)) # recieve messages from entire subnet
 
     async def receive_msg(self):
 
         print("Client started, listening for offer requests...")
         while True:
-            msg, server_address = self.client_socket.recvfrom(7)
+            msg, server_address = self.client_socket.recvfrom(offer_message_length)
             (magicCookie, msg_type, server_port) = struct.unpack('!IbH', msg) # 7 bytes, ! - big endian
             if magicCookie == magic_cookie:
                 if msg_type == 0x2:
@@ -36,12 +40,13 @@ class Client:
     async def connect_to_server(self, server_address, server_connect_port):
         # print(server_connect_port)
         try: # initiate a client TCP socket - again reuse addr, port and enable broadcast, and try to connect to the server
+
             client_socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             client_socket_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             client_socket_tcp.connect((server_address[0], server_connect_port))
-            #client_socket_tcp.send(team_name)
-            modified_sentence = client_socket_tcp.recv(1024)
+            client_socket_tcp.send(team_name)
+            modified_sentence = client_socket_tcp.recv(BUFFER_SIZE)
             print("From Server: ", modified_sentence.decode()) # recieve start game message from server
             fd = sys.stdin.fileno()
             old_settings = termios.tcgetattr(fd) # turn stdin.read to a non - blocking method using termios package
@@ -50,8 +55,8 @@ class Client:
             except:
                 print("unknown exception")
             try:
-                if not client_socket_tcp.closed():
-                    await self.handle_game(client_socket_tcp)
+                #if not client_socket_tcp.closed():
+                await self.handle_game(client_socket_tcp)
 
             finally:
                 termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
@@ -92,7 +97,7 @@ class Client:
         loop = asyncio.get_event_loop()
         while True:
             try:
-                modified_sentence = await loop.run_in_executor(None, lambda: client_socket_tcp.recv(1024)) # recv from server
+                modified_sentence = await loop.run_in_executor(None, lambda: client_socket_tcp.recv(BUFFER_SIZE)) # recv from server
                 if not modified_sentence: # empty msg = server finished the game and closed the connection
                     print("SERVER TOLD ME GAME IS OVER :( ")
                     break

@@ -16,10 +16,14 @@ GREEN = '\u001b[32m'
 
 
 server_broadcast_port = 55555
+broadcast_address_local_host = '127.0.255.255'
+broadcast_address_ssh = '172.1.255.255'
 BUFFER_SIZE = 2048
 udp_lock = threading.Lock()
 magic_cookie = 0xfeedbeef
 offer_msg_type = 0x2
+timeout = 10
+
 
 dict_lock = threading.Lock()
 
@@ -71,56 +75,46 @@ class Server:
 
         while True:
             now = time.time()
-            if now-start > 10: # we mesure time and close offer sending state after 10 seconds
+            if now-start > timeout: # we mesure time and close offer sending state after 10 seconds
                 break
             try:
                 # initiate a server TCP socket - again reuse addr, port and enable broadcast, and listen for client that supposed to connect
                 server_socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 server_socket_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 server_socket_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-                server_socket_tcp.settimeout(10)
+                server_socket_tcp.settimeout(timeout)
                 server_socket_tcp.bind((server_ip, 0)) # 0 -> generate free port
                 tcp_port = server_socket_tcp.getsockname()[1] # get the free port allocated by OS
                 server_socket_tcp.listen(1)
                 udp_lock.acquire()
-                udp_connection_thread= threading.Thread(target=self.wait_for_accept_offer,
+                udp_connection_thread= threading.Thread(target=self.send_offers,
                                                          args=(tcp_port,))
                 udp_connection_thread.start()
 
                 client_socket_tcp, client_address = server_socket_tcp.accept()
                 udp_lock.release()
-                client_socket_tcp.setblocking(0)
-                try:
-                    name = client_socket_tcp.recv(2048) # recieve team name from client
-                except:
-                    print("User did not insert name")
-                    client_socket_tcp.close()
-                    time.sleep(0.2)
-                    continue
-                else:
-                    print(BLUE + "Willkommen zuhause: " + name.decode() + RESET) # a litlle German :)
-                    #print("GIT RDY!!!")
-                    teams.append((name, client_socket_tcp)) # add new team to our data structure
-                    teams_counters[name]=0
-                    # client_socket_tcp.send(b"you are connected, wait for game to start")
-                    # print("waiting for more clients")
+
+                name = client_socket_tcp.recv(BUFFER_SIZE) # recieve team name from client
+                print(BLUE + "Willkommen zuhause: " + name.decode() + RESET) # a litlle German :)
+                #print("GIT RDY!!!")
+                teams.append((name, client_socket_tcp)) # add new team to our data structure
+                teams_counters[name]=0
+                # client_socket_tcp.send(b"you are connected, wait for game to start")
+                # print("waiting for more clients")
 
             except Exception as e:
                 udp_lock.release()
                 continue
 
-        time.sleep(0.1)
-        if len(teams) == 0:
-            print("I Guess no one want's to play")
-        else:
-            print(RED + "Initiating Game Protocol..." + RESET)
-            self.handle_game()
+        time.sleep(2)
+        print(RED + "Initiating Game Protocol..." + RESET)
+        self.handle_game()
 
-    def wait_for_accept_offer(self,server_port):
+    def send_offers(self,server_port):
         while udp_lock.locked():
             msg = struct.pack('!IbH', magic_cookie, offer_msg_type, server_port) # 7 bytes, ! - big endian
-            self.server_udp_socket.sendto(msg, ('172.1.255.255', server_broadcast_port)) # send broadcast offer to all subnet
-            time.sleep(0.1)
+            self.server_udp_socket.sendto(msg, (broadcast_address_ssh, server_broadcast_port)) # send broadcast offer to all subnet
+
 
     def handle_game(self):
         # handle game
@@ -180,21 +174,19 @@ class Server:
         tup[1].send((BLUE + start_message_part1 + self.to_string_group(group1) + start_message_part2 +
                      self.to_string_group(group2) + start_message_part3 +RESET).encode())
 
+        tup[1].setblocking(0)
         start = time.time()
-        print("here 1")
+
         while True:
             now = time.time()
-            if now - start > 10:
+            if now - start > timeout:
                 break
             try:
                 c = tup[1].recv(3) # recv char and increase counter
                 if c:
-                    time.sleep(1)
                     group_counter+=1
             except:
-                time.sleep(1)
                 continue
-        print("here 2")
 
         # tup[1].send(b"stop")
         dict_lock.acquire() # lock and update statistics
