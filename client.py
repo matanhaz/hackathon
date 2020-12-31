@@ -8,7 +8,7 @@ import asyncio
 magic_cookie = 0xfeedbeef
 offer_msg_type = 0x2
 BUFFER_SIZE = 1024
-port = 55555
+port = 13117
 broadcast_address_ssh = '172.1.255.255'
 broadcast_address_local_host = '127.0.255.255'
 offer_message_length = 7
@@ -23,7 +23,7 @@ class Client:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.client_socket.bind((broadcast_address_ssh, port)) # recieve messages from entire subnet
+        self.client_socket.bind((broadcast_address_local_host, port)) # recieve messages from entire subnet
 
     async def receive_msg(self):
 
@@ -32,7 +32,7 @@ class Client:
             msg, server_address = self.client_socket.recvfrom(offer_message_length)
             (magicCookie, msg_type, server_port) = struct.unpack('!IbH', msg) # 7 bytes, ! - big endian
             if magicCookie == magic_cookie:
-                if msg_type == 0x2:
+                if msg_type == offer_msg_type:
                     print("Received offer from " + str(server_address[0]) + ", attempting to connect...") # recieved proper offer message (magic cookie and type)
                     # print(server_address)
                     await self.connect_to_server(server_address, server_port)

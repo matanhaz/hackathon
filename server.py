@@ -15,7 +15,7 @@ GREEN = '\u001b[32m'
 
 
 
-server_broadcast_port = 55555
+server_broadcast_port = 13117
 broadcast_address_local_host = '127.0.255.255'
 broadcast_address_ssh = '172.1.255.255'
 BUFFER_SIZE = 2048
@@ -113,7 +113,7 @@ class Server:
     def send_offers(self,server_port):
         while udp_lock.locked():
             msg = struct.pack('!IbH', magic_cookie, offer_msg_type, server_port) # 7 bytes, ! - big endian
-            self.server_udp_socket.sendto(msg, (broadcast_address_ssh, server_broadcast_port)) # send broadcast offer to all subnet
+            self.server_udp_socket.sendto(msg, (broadcast_address_local_host, server_broadcast_port)) # send broadcast offer to all subnet
 
 
     def handle_game(self):
