@@ -23,7 +23,7 @@ class Client:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.client_socket.bind((broadcast_address_local_host, port)) # recieve messages from entire subnet
+        self.client_socket.bind((broadcast_address_ssh, port)) # recieve messages from entire subnet
 
     async def receive_msg(self):
 
